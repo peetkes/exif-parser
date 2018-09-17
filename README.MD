@@ -10,6 +10,8 @@ It will return a map with key-value properties, Two properties contain a map wit
 It is based on the work of miguelrgonzalez
 The original gist can be found here: https://gist.github.com/miguelrgonzalez/d8daf7e3840f20b8dcee
 
+## Usage
+
 ```xquery
 let $image := xdmp:external-binary("some location on disk")
 return exif:parse(xdmp:external-binary($image))

@@ -15,7 +15,7 @@ xquery version "1.0-ml";
  : limitations under the License.
  :  
  : @author      Peter Kester (peetkes@gmail.com)
- : @Version     1.0.0
+ : @version     1.0.0
  : @description This library can be used to extract all exif properties from jpeg images.
  :      To use this library you need to import the module and pass in an image as a binary object.
  :      It will return a map with key-value properties, Two properties contain a map with key-value properties
