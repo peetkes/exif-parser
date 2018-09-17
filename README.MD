@@ -7,15 +7,21 @@ It will return a map with key-value properties, Two properties contain a map wit
 * ExifProps
 * GPSProps
 
-It is based on the work of miguelrgonzalez
-The original gist can be found here: https://gist.github.com/miguelrgonzalez/d8daf7e3840f20b8dcee
+It is based on the work of [miguelrgonzalez](https://github.com/miguelrgonzalez)
+The original gist can be found [here](https://gist.github.com/miguelrgonzalez/d8daf7e3840f20b8dcee)
 
 ## Usage
 
 ```xquery
-let $image := xdmp:external-binary("some location on disk")
-return exif:parse(xdmp:external-binary($image))
+let $image-uri := "some location on disk"
+return exif:parse(xdmp:external-binary($image-uri))
 ```
+or when images reside in MarkLogic content database
+```xquery
+let $image-uri := "some location in database"
+return exif:parse(fn:doc($image-uri))
+```
+
 This will result in something like below
 
 ```xml

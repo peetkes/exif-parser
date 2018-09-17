@@ -89,9 +89,9 @@ declare private function exif:endianness(
         $byte-order as xs:string
 ) as binary()
 {
-    if ($byte-order eq 'BI')
+    if ($byte-order eq 'BE')
     then $binary
-    else (: LI :)
+    else (: LE :)
         let $size := xdmp:binary-size($binary)
         let $result :=
             for $pos in (0 to $size - 1)
@@ -225,8 +225,8 @@ declare private function exif:get-tiff-header(
     let $tiff-header := binary { xs:hexBinary(xdmp:subbinary($image, $tiff-header-start, 8)) }
     let $byte-order :=
         if (fn:matches(fn:string(xs:hexBinary($tiff-header)), '^4D4D.*'))
-        then 'BI' (: Big indian :)
-        else 'LI' (: Assume 4949 Little indian :)
+        then 'BE' (: Big Endian :)
+        else 'LE' (: Assume 4949 Little Endian :)
     (: see http://partners.adobe.com/public/developer/en/tiff/TIFF6.pdf :)
     let $idf0-offset := xdmp:hex-to-integer(fn:string(xs:hexBinary(exif:endianness(binary { xs:hexBinary(xdmp:subbinary($tiff-header, 5, 4))}, $byte-order))))
     return map:map()
