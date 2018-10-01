@@ -166,33 +166,27 @@ declare private function exif:fetch-value(
                 else ''
         else
             if ($exif-consts:TYPES/type[@id eq  $type and @decode eq 'true'])
-            then (
-                if ($size eq 1)
-                then exif:hex-to-string(fn:string(xs:integer(fn:string(xs:hexBinary((exif:endianness($offset, $byte-order)))))))
-                else xdmp:binary-decode(exif:endianness($offset, $byte-order), 'utf8')
-            ) else if ($exif-consts:TYPES/type[@id eq  $type] = ("Short", "Long"))
+            then xdmp:binary-decode(exif:get-ascii-string(exif:endianness($offset, $byte-order), $size), 'utf8')
+            else if ($exif-consts:TYPES/type[@id eq  $type] = ("Short", "Long"))
             then fetch-short-or-long($byte-order, $count, $size, $offset)
             else xs:string(fn:data(exif:endianness($offset, $byte-order)))
 };
 
-declare private function exif:hex-digit($digit as xs:integer) as xs:integer {
-    (: range '0'..'9' :)
-    if(48 le $digit and $digit lt 58) then $digit - 48
-    (: range 'a'..'f' :)
-    else if(97 le $digit and $digit lt 103) then $digit - 87
-    (: everything else :)
-    else fn:error((), 'Illegal character: ' || $digit)
-};
-
-declare private function exif:hex-to-string($hex as xs:string) as xs:string {
-    let $n := fn:string-length($hex)
-    let $digits := fn:string-to-codepoints(lower-case($hex))
-    return fn:codepoints-to-string(
-            for $pos in 1 to $n idiv 2
-            let $hi := $digits[2 * $pos - 1],
-                $lo := $digits[2 * $pos]
-            return 16 * exif:hex-digit($hi) + exif:hex-digit($lo)
-    )
+(:  gets NULL terminated asci string :)
+declare private function exif:get-ascii-string(
+    $ascii-string as binary(),
+    $size as xs:integer
+) as binary()
+{
+    binary {
+        fn:string-join(
+            for $i in 1 to $size
+            let $byte := substring(xs:string($ascii-string), 2 * ($i - 1) + 1, 2)
+            where $byte ne "00"
+            return $byte,
+            ""
+        )
+    }
 };
 
 declare private function exif:extract-fields(

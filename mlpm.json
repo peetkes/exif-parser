@@ -1,6 +1,6 @@
 {
 	"name": "EXIF-Parser",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "XQuery module for extracting EXIF properties from images",
 	"repository": "https://github.com/peetkes/exif-parser"
 }
