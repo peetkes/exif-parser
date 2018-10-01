@@ -159,7 +159,12 @@ declare private function exif:fetch-value(
                 if (xdmp:binary-size($binary) > 0)
                 then
                     if ($exif-consts:TYPES/type[@id eq  $type and @decode eq 'true'])
-                    then xdmp:binary-decode($binary, 'utf8')
+                    then 
+                        let $ascii-string := exif:get-ascii-string(exif:endianness($offset, $byte-order), xdmp:binary-size($offset))
+                        return
+                            if (fn:empty($ascii-string))
+                            then ()
+                            else xdmp:binary-decode($ascii-string, 'utf8')
                     else if ($exif-consts:TYPES/type[@id eq $type] = ("Rational","SRational"))
                     then exif:fetch-rational($byte-order, $count, $size, $binary)
                     else xs:string(fn:data($binary))
@@ -176,9 +181,11 @@ declare private function exif:fetch-value(
 declare private function exif:get-ascii-string(
     $ascii-string as binary(),
     $size as xs:integer
-) as binary()
+) as binary()?
 {
-    binary {
+    if (xdmp:hex-to-integer(xs:string($ascii-string)) eq 0)
+    then ()
+    else binary {
         fn:string-join(
             for $i in 1 to $size
             let $byte := substring(xs:string($ascii-string), 2 * ($i - 1) + 1, 2)
@@ -188,6 +195,7 @@ declare private function exif:get-ascii-string(
         )
     }
 };
+
 
 declare private function exif:extract-fields(
         $image as binary(),
