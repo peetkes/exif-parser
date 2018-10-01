@@ -79,8 +79,29 @@ declare function exif:parse(
                         xs:hexBinary(xdmp:subbinary($image, $app-start+2, $app1-size))
                     }
                 else ()
+            let $jfif-start :=
+                if ($app0-marker eq "FFE0" and $app0-name eq "JFIF")
+                then $start0
+                else 0
+            let $jfif-block := 
+                if ($app0-marker eq "FFE0" and $app0-name eq "JFIF")
+                then
+                    element app-block {
+                        attribute start { $jfif-start + 2 },
+                        attribute size { $app0-size },
+                        attribute name { $app0-name },
+                        xs:hexBinary(xdmp:subbinary($image, $jfif-start+2, $app0-size))
+                    }
+                else ()
             let $tiff-header := exif:get-tiff-header($app-block/@start, binary { $app-block })
-            return exif:extract-fields($image, map:get($tiff-header,"byte-order"), map:get($tiff-header,"start"), map:get($tiff-header,"offset"), $exif-consts:FIELDS)
+            let $jfif-header :=
+                if ($jfif-start eq 0)
+                then ()
+                else exif:get-jfif-header($jfif-block/@start, binary { $jfif-block })
+            let $fields := exif:extract-fields($image, map:get($tiff-header,"byte-order"), map:get($tiff-header,"start"), map:get($tiff-header,"offset"), $exif-consts:FIELDS)
+            return $fields
+                =>map:with("ImageSize", xdmp:binary-size($image))
+                =>map:with("JfifProps", $jfif-header)
         ) else ()
 };
 
@@ -159,19 +180,19 @@ declare private function exif:fetch-value(
                 if (xdmp:binary-size($binary) > 0)
                 then
                     if ($exif-consts:TYPES/type[@id eq  $type and @decode eq 'true'])
-                    then 
-                        let $ascii-string := exif:get-ascii-string(exif:endianness($offset, $byte-order), xdmp:binary-size($offset))
-                        return
-                            if (fn:empty($ascii-string))
-                            then ()
-                            else xdmp:binary-decode($ascii-string, 'utf8')
+                    then xdmp:binary-decode($binary, 'utf8')
                     else if ($exif-consts:TYPES/type[@id eq $type] = ("Rational","SRational"))
                     then exif:fetch-rational($byte-order, $count, $size, $binary)
                     else xs:string(fn:data($binary))
                 else ''
         else
             if ($exif-consts:TYPES/type[@id eq  $type and @decode eq 'true'])
-            then xdmp:binary-decode(exif:get-ascii-string(exif:endianness($offset, $byte-order), $size), 'utf8')
+            then
+                let $ascii-string := exif:get-ascii-string(exif:endianness($offset, $byte-order), xdmp:binary-size($offset))
+                return
+                    if (fn:empty($ascii-string))
+                    then ()
+                    else xdmp:binary-decode($ascii-string, 'utf8')
             else if ($exif-consts:TYPES/type[@id eq  $type] = ("Short", "Long"))
             then fetch-short-or-long($byte-order, $count, $size, $offset)
             else xs:string(fn:data(exif:endianness($offset, $byte-order)))
@@ -195,7 +216,6 @@ declare private function exif:get-ascii-string(
         )
     }
 };
-
 
 declare private function exif:extract-fields(
         $image as binary(),
@@ -241,7 +261,7 @@ declare private function exif:extract-fields(
     return $map
 };
 
-declare private function exif:get-tiff-header(
+declare function exif:get-tiff-header(
         $offset as xs:integer,
         $image as binary()
 ) as map:map
@@ -259,5 +279,24 @@ declare private function exif:get-tiff-header(
     => map:with("byte-order", $byte-order)
     => map:with("start", $tiff-header-start + $offset - 1)
     => map:with("offset", $idf0-offset)
+};
+
+declare function exif:get-jfif-header(
+  $start as xs:integer,
+  $binary as binary()
+) as map:map
+{
+(:00104A46494600010101012C012C0000:)
+    let $versionMajor := xdmp:subbinary($binary, 8, 1)
+    let $versionMinor := xdmp:subbinary($binary, 9, 1)
+    let $units := xdmp:subbinary($binary, 10, 1)
+    let $xDensity := xdmp:subbinary($binary, 11, 2)
+    let $yDensity := xdmp:subbinary($binary, 13, 2)
+    return map:map()
+    => map:with("JfifVersionMajor", $versionMajor/fn:string())
+    => map:with("JfifVersionMinor", $versionMinor/fn:string())
+    => map:with("ResolutionUnit", xdmp:hex-to-integer($units/fn:string()))
+    => map:with("XResolution", xdmp:hex-to-integer($xDensity/fn:string()))
+    => map:with("YResolution", xdmp:hex-to-integer($yDensity/fn:string()))
 };
 
